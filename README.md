@@ -152,8 +152,8 @@ Uso personal únicamente. No redistribuir sin autorización.
 
 ```bash
 # 1. Clonar y configurar
-git clone https://github.com/TU_USUARIO/pol-wallet.git
-cd pol-wallet
+git clone https://github.com/jesus777-Verius/Plo-wallet.git
+cd Plo-wallet
 npm install
 
 # 2. Desarrollo local
@@ -161,7 +161,7 @@ npm run dev
 # Abre http://localhost:3000
 
 # 3. Desplegar en Render
-# Sigue la guía en RENDER-DEPLOYMENT.md
+# Sigue la guía en DEPLOY-RENDER-READY.md
 ```
 
 ---
