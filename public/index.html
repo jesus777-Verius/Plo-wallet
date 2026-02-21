@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POL Wallet</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Auth Screen -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-container">
+            <div class="logo">
+                <img src="matic-logo.png" alt="Polygon" class="polygon-logo-img">
+                <h1>POL Wallet</h1>
+                <p>Tu wallet personal segura para Polygon</p>
+            </div>
+            
+            <!-- Login Form -->
+            <div class="auth-form" id="loginForm">
+                <h3>Acceder a tu Wallet</h3>
+                <div class="input-group">
+                    <input type="password" id="loginPassword" placeholder="Contraseña de acceso" class="auth-input">
+                    <div class="input-error" id="loginError"></div>
+                </div>
+                <button onclick="login()" class="auth-btn primary">
+                    <i class="fas fa-unlock"></i>
+                    Acceder
+                </button>
+                <button onclick="showSetupAuth()" class="auth-btn secondary">
+                    <i class="fas fa-cog"></i>
+                    Primera vez / Configurar
+                </button>
+            </div>
+
+            <!-- Setup Auth Form -->
+            <div class="auth-form" id="setupAuthForm" style="display: none;">
+                <h3>Configurar Seguridad</h3>
+                <div class="input-group">
+                    <label>Crear contraseña de acceso</label>
+                    <input type="password" id="setupPassword" placeholder="Contraseña segura" class="auth-input">
+                    <div class="input-error" id="setupPasswordError"></div>
+                </div>
+                <div class="input-group">
+                    <label>Confirmar contraseña</label>
+                    <input type="password" id="confirmPassword" placeholder="Repetir contraseña" class="auth-input">
+                    <div class="input-error" id="confirmPasswordError"></div>
+                </div>
+                <div class="security-options">
+                    <div class="option-item">
+                        <input type="checkbox" id="enableBiometric" class="option-checkbox">
+                        <label for="enableBiometric">Recordar por 24 horas</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="checkbox" id="enableAutoLock" class="option-checkbox" checked>
+                        <label for="enableAutoLock">Bloqueo automático (15 min)</label>
+                    </div>
+                </div>
+                <button onclick="setupAuth()" class="auth-btn primary">
+                    <i class="fas fa-shield-alt"></i>
+                    Configurar Seguridad
+                </button>
+                <button onclick="showLogin()" class="auth-btn secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    Volver
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup Screen -->
+    <div class="setup-screen" id="setupScreen" style="display: none;">
+        <div class="setup-container">
+            <div class="logo">
+                <img src="matic-logo.png" alt="Polygon" class="polygon-logo-img">
+                <h1>POL Wallet</h1>
+                <p>Tu wallet personal para Polygon</p>
+            </div>
+            
+            <div class="setup-actions">
+                <button onclick="createWallet()" class="setup-btn primary">
+                    <i class="fas fa-plus"></i>
+                    Crear Nueva Wallet
+                </button>
+                
+                <button onclick="showImportForm()" class="setup-btn secondary">
+                    <i class="fas fa-download"></i>
+                    Importar Wallet
+                </button>
+            </div>
+
+            <div class="import-form" id="importForm" style="display: none;">
+                <input type="password" id="privateKeyInput" placeholder="Ingresa tu Private Key" class="import-input">
+                <div class="import-actions">
+                    <button onclick="importWallet()" class="setup-btn primary">Importar</button>
+                    <button onclick="hideImportForm()" class="setup-btn secondary">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Wallet Screen -->
+    <div class="wallet-screen" id="walletScreen" style="display: none;">
+        <!-- Status Bar -->
+        <div class="status-bar" id="statusBar" style="display: none;">
+            <div class="status-content">
+                <i class="status-icon fas fa-info-circle"></i>
+                <span class="status-message">Conectado al servidor</span>
+                <button class="status-close" onclick="hideStatus()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <div class="wallet-header">
+            <div class="wallet-selector">
+                <i class="fas fa-wallet"></i>
+                <span>Main Wallet</span>
+                <div class="security-indicator" id="securityIndicator">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button onclick="refreshBalance()" class="icon-btn">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button onclick="lockWallet()" class="icon-btn lock-btn">
+                    <i class="fas fa-lock"></i>
+                </button>
+                <button onclick="showSettings()" class="icon-btn">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Balance Section -->
+        <div class="balance-section">
+            <div class="balance-amount">
+                <span class="currency-symbol">$</span>
+                <span id="balanceUSD">0.00</span>
+                <span class="currency">USD</span>
+            </div>
+            <div class="balance-crypto">
+                <span id="balancePOL">0.0000</span> POL
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button onclick="showReceive()" class="action-btn receive">
+                <i class="fas fa-arrow-down"></i>
+                Recibir
+            </button>
+            <button onclick="showSend()" class="action-btn send">
+                <i class="fas fa-arrow-up"></i>
+                Enviar
+            </button>
+        </div>
+
+        <!-- Token List -->
+        <div class="token-section">
+            <div class="token-item active">
+                <div class="token-info">
+                    <div class="token-icon polygon">
+                        <img src="matic-logo.png" alt="POL" class="token-logo">
+                    </div>
+                    <div class="token-details">
+                        <div class="token-name">Polygon</div>
+                        <div class="token-network">Polygon</div>
+                    </div>
+                </div>
+                <div class="token-balance">
+                    <div class="token-amount" id="tokenAmount">0.0000 POL</div>
+                    <div class="token-value" id="tokenValue">$0.00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <button class="nav-item active">
+                <i class="fas fa-wallet"></i>
+                <span>Wallet</span>
+            </button>
+            <button class="nav-item" onclick="showActivity()">
+                <i class="fas fa-history"></i>
+                <span>Actividad</span>
+            </button>
+            <button class="nav-item" onclick="showSecurity()">
+                <i class="fas fa-shield-alt"></i>
+                <span>Seguridad</span>
+            </button>
+            <button class="nav-item" onclick="showSettings()">
+                <i class="fas fa-cog"></i>
+                <span>Config</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Send Modal -->
+    <div class="modal" id="sendModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Enviar POL</h3>
+                <button onclick="closeSendModal()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Dirección destino</label>
+                    <input type="text" id="sendToAddress" placeholder="0x..." class="modal-input">
+                    <div class="input-error" id="addressError"></div>
+                </div>
+                <div class="input-group">
+                    <label>Cantidad</label>
+                    <div class="amount-input">
+                        <input type="number" id="sendAmount" placeholder="0.0" step="0.0001" class="modal-input">
+                        <span class="currency-label">POL</span>
+                    </div>
+                    <div class="input-error" id="amountError"></div>
+                </div>
+                <div class="input-group">
+                    <label>Gas Price (opcional)</label>
+                    <input type="number" id="sendGasPrice" placeholder="20" class="modal-input">
+                </div>
+                <button onclick="sendTransaction()" class="modal-btn primary" id="sendBtn">
+                    <i class="fas fa-paper-plane"></i>
+                    Enviar Transacción
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receive Modal -->
+    <div class="modal" id="receiveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Recibir POL</h3>
+                <button onclick="closeReceiveModal()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-section">
+                    <div class="qr-placeholder">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                </div>
+                <div class="address-section">
+                    <label>Tu dirección POL</label>
+                    <div class="address-display">
+                        <span id="receiveAddress"></span>
+                        <button onclick="copyAddress()" class="copy-btn">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="receive-note">Comparte esta dirección para recibir POL</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Modal -->
+    <div class="modal" id="securityModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Centro de Seguridad</h3>
+                <button onclick="closeSecurityModal()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="security-section">
+                    <div class="security-item">
+                        <div class="security-info">
+                            <i class="fas fa-key"></i>
+                            <div>
+                                <div class="security-title">Private Key</div>
+                                <div class="security-desc">Ver y copiar tu private key</div>
+                            </div>
+                        </div>
+                        <button onclick="exportPrivateKey()" class="security-btn">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="security-item">
+                        <div class="security-info">
+                            <i class="fas fa-lock"></i>
+                            <div>
+                                <div class="security-title">Cambiar Contraseña</div>
+                                <div class="security-desc">Actualizar contraseña de acceso</div>
+                            </div>
+                        </div>
+                        <button onclick="changePassword()" class="security-btn">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    <div class="security-item">
+                        <div class="security-info">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <div class="security-title">Auto-bloqueo</div>
+                                <div class="security-desc">Bloqueo automático en 15 min</div>
+                            </div>
+                        </div>
+                        <div class="security-toggle">
+                            <input type="checkbox" id="autoLockToggle" class="toggle-checkbox" checked>
+                            <label for="autoLockToggle" class="toggle-label"></label>
+                        </div>
+                    </div>
+                    <div class="security-item">
+                        <div class="security-info">
+                            <i class="fas fa-history"></i>
+                            <div>
+                                <div class="security-title">Recordar Sesión</div>
+                                <div class="security-desc">Mantener sesión por 24h</div>
+                            </div>
+                        </div>
+                        <div class="security-toggle">
+                            <input type="checkbox" id="rememberToggle" class="toggle-checkbox">
+                            <label for="rememberToggle" class="toggle-label"></label>
+                        </div>
+                    </div>
+                </div>
+                <div class="security-actions">
+                    <button onclick="lockWallet()" class="modal-btn secondary">
+                        <i class="fas fa-lock"></i>
+                        Bloquear Ahora
+                    </button>
+                    <button onclick="resetWallet()" class="modal-btn danger">
+                        <i class="fas fa-trash"></i>
+                        Reset Completo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Modal -->
+    <div class="modal" id="activityModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Actividad Reciente</h3>
+                <button onclick="closeActivityModal()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="activityList" class="activity-list">
+                    <!-- Activity items will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Configuración</h3>
+                <button onclick="closeSettingsModal()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <i class="fas fa-wallet"></i>
+                            Wallet Address
+                        </div>
+                        <div class="setting-value" id="settingsAddress">No cargada</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <i class="fas fa-network-wired"></i>
+                            Red
+                        </div>
+                        <div class="setting-value">Polygon Mainnet</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <i class="fas fa-code-branch"></i>
+                            Versión
+                        </div>
+                        <div class="setting-value">2.0.0</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <i class="fas fa-shield-alt"></i>
+                            Estado de Seguridad
+                        </div>
+                        <div class="setting-value security-status" id="securityStatus">Protegido</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Private Key Modal -->
+    <div class="modal" id="privateKeyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Private Key</h3>
+                <button onclick="closePrivateKeyModal()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="warning-box">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>¡NUNCA compartas tu private key! Quien la tenga puede acceder a todos tus fondos.</p>
+                </div>
+                <div class="private-key-display">
+                    <div class="private-key-text" id="privateKeyText"></div>
+                    <button onclick="copyPrivateKey()" class="copy-btn">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Confirmation Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirmar Transacción</h3>
+                <button onclick="closeConfirmModal()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="confirm-details">
+                    <div class="confirm-item">
+                        <span class="confirm-label">Para:</span>
+                        <span class="confirm-value" id="confirmTo"></span>
+                    </div>
+                    <div class="confirm-item">
+                        <span class="confirm-label">Cantidad:</span>
+                        <span class="confirm-value" id="confirmAmount"></span>
+                    </div>
+                    <div class="confirm-item">
+                        <span class="confirm-label">Valor USD:</span>
+                        <span class="confirm-value" id="confirmUSD"></span>
+                    </div>
+                    <div class="confirm-item">
+                        <span class="confirm-label">Gas Price:</span>
+                        <span class="confirm-value" id="confirmGas"></span>
+                    </div>
+                </div>
+                <div class="confirm-actions">
+                    <button onclick="closeConfirmModal()" class="modal-btn secondary">Cancelar</button>
+                    <button onclick="confirmTransaction()" class="modal-btn primary" id="confirmBtn">
+                        <i class="fas fa-check"></i>
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env.local
+*.log
+.DS_Store
+coverage/
+data/
+backup_*.json
+
+# Mantener archivos de configuración
+!.env
+!.env.production

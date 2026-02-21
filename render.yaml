@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: pol-wallet
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: POLYGON_RPC_URL
+        value: https://1rpc.io/matic
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ENCRYPTION_SALT
+        generateValue: true
+    disk:
+      name: pol-wallet-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
