@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <!-- Security Meta Tags -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https://polygon-rpc.com https://rpc-mainnet.matic.network https://matic-mainnet.chainstacklabs.com https://rpc-mainnet.maticvigil.com https://polygon-bor-rpc.publicnode.com https://api.ipify.org; font-src 'self' https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#8247e5" />
+    <meta name="description" content="Tu wallet personal segura para Polygon (POL) - Encriptación AES-256" />
+    <meta name="keywords" content="polygon, wallet, crypto, blockchain, segura, encriptada" />
+    <meta name="author" content="Elyon Wallet" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/matic-logo.png" />
+    
+    <!-- iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Elyon" />
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></noscript>
+    
+    <title>Elyon - Polygon Wallet Segura</title>
+  </head>
+  <body>
+    <noscript>
+      <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h1>JavaScript Requerido</h1>
+        <p>Esta aplicación requiere JavaScript para funcionar correctamente.</p>
+        <p>Por favor, habilita JavaScript en tu navegador.</p>
+      </div>
+    </noscript>
+    
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration with Error Handling -->
+    <script>
+      (function() {
+        'use strict';
+        
+        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js', {
+              scope: '/'
+            })
+            .then(function(registration) {
+              console.log('SW registrado exitosamente:', registration.scope);
+              
+              // Verificar actualizaciones
+              registration.addEventListener('updatefound', function() {
+                console.log('Nueva versión de SW disponible');
+              });
+            })
+            .catch(function(error) {
+              console.error('SW registro falló:', error);
+            });
+          });
+          
+          // Manejar mensajes del SW
+          navigator.serviceWorker.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'CACHE_UPDATED') {
+              console.log('Cache actualizado');
+            }
+          });
+        }
+        
+        // Prevenir ataques de clickjacking
+        if (window.top !== window.self) {
+          window.top.location = window.self.location;
+        }
+        
+        // Limpiar datos sensibles al cerrar
+        window.addEventListener('beforeunload', function() {
+          // Limpiar datos temporales
+          if (sessionStorage) {
+            const keysToKeep = ['pol_session'];
+            const allKeys = Object.keys(sessionStorage);
+            allKeys.forEach(key => {
+              if (!keysToKeep.includes(key)) {
+                sessionStorage.removeItem(key);
+              }
+            });
+          }
+        });
+        
+        // Detectar herramientas de desarrollo
+        let devtools = {open: false, orientation: null};
+        const threshold = 160;
+        
+        setInterval(function() {
+          if (window.outerHeight - window.innerHeight > threshold || 
+              window.outerWidth - window.innerWidth > threshold) {
+            if (!devtools.open) {
+              devtools.open = true;
+              console.warn('⚠️ Herramientas de desarrollo detectadas. Mantén tu wallet segura.');
+            }
+          } else {
+            devtools.open = false;
+          }
+        }, 500);
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,60 @@
+{
+  "name": "Elyon - Polygon Wallet",
+  "short_name": "Elyon",
+  "description": "Wallet segura para Polygon con encriptación AES-256",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1d2e",
+  "theme_color": "#8247e5",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/matic-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["finance", "utilities", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Enviar",
+      "short_name": "Enviar",
+      "description": "Enviar criptomonedas",
+      "url": "/?action=send",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Recibir",
+      "short_name": "Recibir",
+      "description": "Recibir criptomonedas",
+      "url": "/?action=receive",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "protocol_handlers": [],
+  "file_handlers": [],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}
