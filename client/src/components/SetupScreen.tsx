@@ -12,13 +12,11 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
   const [privateKeyInput, setPrivateKeyInput] = useState('');
   const [mnemonicInput, setMnemonicInput] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [pendingWallet, setPendingWallet] = useState<any>(null);
 
   const createWallet = async () => {
-    setLoading(true);
     setError('');
     
     try {
@@ -36,8 +34,6 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
       setShowPasswordPrompt(true);
     } catch (err: any) {
       setError(`Error creando wallet: ${err.message}`);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -48,7 +44,6 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
         return;
       }
       
-      setLoading(true);
       setError('');
       
       try {
@@ -66,8 +61,6 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
         setShowPasswordPrompt(true);
       } catch (err: any) {
         setError(`Error importando wallet: ${err.message}`);
-      } finally {
-        setLoading(false);
       }
     } else {
       // Importar por mnemonic
@@ -76,7 +69,6 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
         return;
       }
       
-      setLoading(true);
       setError('');
       
       try {
@@ -94,31 +86,40 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
         setShowPasswordPrompt(true);
       } catch (err: any) {
         setError(`Error importando wallet: ${err.message}. Verifica que la frase sea correcta.`);
-      } finally {
-        setLoading(false);
       }
     }
   };
 
-  const saveEncryptedWallet = () => {
+  const saveEncryptedWallet = async () => {
     if (!password || password.length < 8) {
       setError('La contraseña debe tener al menos 8 caracteres');
       return;
     }
     
-    if (!pendingWallet) return;
+    if (!pendingWallet) {
+      setError('No hay wallet pendiente para guardar');
+      return;
+    }
     
     try {
+      setError(''); // Limpiar errores previos
+      
+      console.log('Iniciando encriptación...');
+      
       // Encriptar private key con AES-256
       const encryptedPrivateKey = EncryptionService.encryptPrivateKey(
         pendingWallet.privateKey,
         password
       );
       
+      console.log('Private key encriptada');
+      
       // Encriptar mnemonic si existe
       const encryptedMnemonic = pendingWallet.mnemonic 
         ? EncryptionService.encryptPrivateKey(pendingWallet.mnemonic, password)
         : null;
+      
+      console.log('Mnemonic encriptada (si existe)');
       
       const secureWallet = {
         address: pendingWallet.address,
@@ -131,6 +132,8 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
       localStorage.setItem('pol_wallet_data', JSON.stringify(secureWallet));
       localStorage.setItem('pol_wallet_password_set', 'true');
       
+      console.log('Wallet guardada en localStorage');
+      
       // Pasar wallet con private key desencriptada temporalmente para uso inmediato
       onWalletCreated({
         ...secureWallet,
@@ -138,10 +141,17 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
         mnemonic: pendingWallet.mnemonic
       });
       
+      console.log('Callback onWalletCreated ejecutado');
+      
+      // Limpiar estado
       setShowPasswordPrompt(false);
       setPendingWallet(null);
       setPassword('');
+      
+      console.log('Estado limpiado');
+      
     } catch (err: any) {
+      console.error('Error en saveEncryptedWallet:', err);
       setError(`Error guardando wallet: ${err.message}`);
     }
   };
@@ -166,8 +176,8 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
           <div className="setup-actions">
             <button 
               onClick={createWallet} 
-              className={`setup-btn primary ${loading ? 'btn-loading' : ''}`}
-              disabled={loading || showPasswordPrompt}
+              className="setup-btn primary"
+              disabled={showPasswordPrompt}
             >
               <i className="fas fa-plus"></i>
               Crear Nueva Wallet
@@ -176,7 +186,7 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
             <button 
               onClick={() => setShowImport(!showImport)} 
               className="setup-btn secondary"
-              disabled={loading || showPasswordPrompt}
+              disabled={showPasswordPrompt}
             >
               <i className="fas fa-download"></i>
               Importar Wallet
@@ -224,8 +234,7 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
               <div className="import-actions">
                 <button 
                   onClick={importWallet} 
-                  className={`setup-btn primary ${loading ? 'btn-loading' : ''}`}
-                  disabled={loading}
+                  className="setup-btn primary"
                 >
                   Importar
                 </button>
@@ -237,7 +246,6 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
                     setError('');
                   }} 
                   className="setup-btn secondary"
-                  disabled={loading}
                 >
                   Cancelar
                 </button>

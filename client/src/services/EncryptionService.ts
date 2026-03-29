@@ -7,7 +7,7 @@ import CryptoJS from 'crypto-js';
 export class EncryptionService {
   private static readonly ITERATIONS = 500000; // Aumentado para mayor seguridad
   private static readonly KEY_SIZE = 256 / 32; // 256 bits
-  private static readonly MIN_PASSWORD_LENGTH = 12; // Contraseñas más fuertes
+  private static readonly MIN_PASSWORD_LENGTH = 8; // Contraseñas de 8 caracteres mínimo
   
   /**
    * Encripta la private key con la contraseña del usuario

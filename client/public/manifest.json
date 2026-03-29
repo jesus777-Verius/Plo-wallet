@@ -47,14 +47,5 @@
     "preferred_width": 400
   },
   "protocol_handlers": [],
-  "file_handlers": [],
-  "share_target": {
-    "action": "/",
-    "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  }
+  "file_handlers": []
 }
