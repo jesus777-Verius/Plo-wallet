@@ -5,7 +5,7 @@ import CryptoJS from 'crypto-js';
  * Usa AES-256 con derivación de clave PBKDF2
  */
 export class EncryptionService {
-  private static readonly ITERATIONS = 5000; // Optimizado para máxima velocidad (aún seguro)
+  private static readonly ITERATIONS = 1000; // ULTRA RÁPIDO: 1000 iteraciones (5x más rápido)
   private static readonly KEY_SIZE = 256 / 32; // 256 bits
   private static readonly MIN_PASSWORD_LENGTH = 8; // Contraseñas de 8 caracteres mínimo
   
@@ -26,11 +26,11 @@ export class EncryptionService {
       // Generar salt aleatorio más grande
       const salt = CryptoJS.lib.WordArray.random(256 / 8); // 32 bytes
       
-      // Derivar clave con PBKDF2 más fuerte
+      // Derivar clave con PBKDF2 ULTRA RÁPIDO
       const key = CryptoJS.PBKDF2(password, salt, {
         keySize: this.KEY_SIZE,
         iterations: this.ITERATIONS,
-        hasher: CryptoJS.algo.SHA512 // Usar SHA-512
+        hasher: CryptoJS.algo.SHA256 // SHA-256 es más rápido que SHA-512
       });
       
       // Generar IV aleatorio
@@ -43,17 +43,17 @@ export class EncryptionService {
         mode: CryptoJS.mode.CBC
       });
       
-      // Generar HMAC para autenticación (ya que no tenemos GCM)
+      // Generar HMAC para autenticación (RÁPIDO con SHA-256)
       const hmacKey = CryptoJS.PBKDF2(password + 'hmac', salt, {
         keySize: 256 / 32,
         iterations: this.ITERATIONS,
-        hasher: CryptoJS.algo.SHA512
+        hasher: CryptoJS.algo.SHA256
       });
       
       const hmac = CryptoJS.HmacSHA256(salt.toString() + iv.toString() + encrypted.toString(), hmacKey);
       
       // Combinar salt + iv + ciphertext + hmac con versión
-      const version = 'v2:';
+      const version = 'v3:'; // Nueva versión ultra rápida
       const combined = version + salt.toString() + iv.toString() + encrypted.toString() + hmac.toString();
       
       // Limpiar memoria sensible
@@ -77,13 +77,21 @@ export class EncryptionService {
       // Verificar versión
       let data = encryptedData;
       let iterations = this.ITERATIONS;
-      let hasher = CryptoJS.algo.SHA512;
+      let hasher = CryptoJS.algo.SHA256;
       let saltSize = 64; // 32 bytes = 64 hex chars
       let hasHmac = false;
       
-      if (encryptedData.startsWith('v2:')) {
+      if (encryptedData.startsWith('v3:')) {
+        // Nueva versión ultra rápida
         data = encryptedData.substring(3);
         hasHmac = true;
+        iterations = 1000;
+        hasher = CryptoJS.algo.SHA256;
+      } else if (encryptedData.startsWith('v2:')) {
+        data = encryptedData.substring(3);
+        hasHmac = true;
+        iterations = 5000;
+        hasher = CryptoJS.algo.SHA512;
       } else {
         // Compatibilidad con versión anterior
         iterations = 100000;
@@ -138,7 +146,7 @@ export class EncryptionService {
       const privateKey = decrypted.toString(CryptoJS.enc.Utf8);
       
       if (!privateKey || !this.isValidPrivateKey(privateKey)) {
-        throw new Error('Contraseña incorrecta o datos corruptos');
+        throw new Error('INVALID_PASSWORD');
       }
       
       // Limpiar memoria sensible
@@ -146,7 +154,11 @@ export class EncryptionService {
       
       return privateKey;
     } catch (error) {
-      throw new Error('Error desencriptando private key - Contraseña incorrecta');
+      const errorMsg = (error as Error).message;
+      if (errorMsg === 'INVALID_PASSWORD' || errorMsg.includes('HMAC')) {
+        throw new Error('Contraseña incorrecta');
+      }
+      throw new Error('Error desencriptando: Contraseña incorrecta o datos corruptos');
     }
   }
   
@@ -158,19 +170,14 @@ export class EncryptionService {
       throw new Error(`La contraseña debe tener al menos ${this.MIN_PASSWORD_LENGTH} caracteres`);
     }
     
-    // Validar complejidad de contraseña
-    if (!this.isStrongPassword(password)) {
-      throw new Error('La contraseña debe contener mayúsculas, minúsculas, números y símbolos');
-    }
-    
     const salt = CryptoJS.lib.WordArray.random(256 / 8); // 32 bytes
     const hash = CryptoJS.PBKDF2(password, salt, {
       keySize: 512 / 32,
       iterations: this.ITERATIONS,
-      hasher: CryptoJS.algo.SHA512
+      hasher: CryptoJS.algo.SHA256 // SHA-256 más rápido
     });
     
-    return 'v2:' + salt.toString() + hash.toString();
+    return 'v3:' + salt.toString() + hash.toString();
   }
   
   /**
@@ -180,11 +187,18 @@ export class EncryptionService {
     try {
       let hash = storedHash;
       let iterations = this.ITERATIONS;
-      let hasher = CryptoJS.algo.SHA512;
+      let hasher = CryptoJS.algo.SHA256;
       let saltSize = 64;
       
-      if (storedHash.startsWith('v2:')) {
+      if (storedHash.startsWith('v3:')) {
+        // Nueva versión ultra rápida
         hash = storedHash.substring(3);
+        iterations = 1000;
+        hasher = CryptoJS.algo.SHA256;
+      } else if (storedHash.startsWith('v2:')) {
+        hash = storedHash.substring(3);
+        iterations = 5000;
+        hasher = CryptoJS.algo.SHA512;
       } else {
         // Compatibilidad con versión anterior
         iterations = 100000;

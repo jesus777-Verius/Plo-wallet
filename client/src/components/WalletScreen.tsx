@@ -34,12 +34,12 @@ function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: 
   const [provider, setProvider] = useState<ethers.JsonRpcProvider | null>(null);
 
   useEffect(() => {
-    // Conectar al RPC de Polygon con fallback automático
+    // Conectar al RPC de Polygon INSTANTÁNEAMENTE
     const initProvider = async () => {
       try {
         const rpcProvider = await getPolygonProvider();
         setProvider(rpcProvider);
-        await updateBalance(rpcProvider);
+        updateBalance(rpcProvider); // Sin await para no bloquear
       } catch (error) {
         console.error('Error initializing provider:', error);
       }
@@ -47,10 +47,10 @@ function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: 
     
     initProvider();
     
-    // Actualizar balance cada 2 minutos para mejor rendimiento
+    // Actualizar balance cada 3 minutos (reducir llamadas RPC)
     const interval = setInterval(() => {
       if (provider) updateBalance(provider);
-    }, 120000);
+    }, 180000);
     
     return () => clearInterval(interval);
   }, [wallet]);
@@ -62,20 +62,22 @@ function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: 
       const currentProvider = rpcProvider || provider;
       if (!currentProvider) return;
       
-      // Obtener balance de POL
-      const polBalanceWei = await currentProvider.getBalance(wallet.address);
+      // Obtener balance de POL en paralelo con USDT
+      const [polBalanceWei, usdtBalanceWei] = await Promise.all([
+        currentProvider.getBalance(wallet.address),
+        (async () => {
+          try {
+            const usdtContract = new ethers.Contract(TOKENS.USDT.address, ERC20_ABI, currentProvider);
+            return await usdtContract.balanceOf(wallet.address);
+          } catch {
+            return 0n;
+          }
+        })()
+      ]);
+      
       const polBalance = parseFloat(ethers.formatEther(polBalanceWei));
       const usdValue = (polBalance * POL_PRICE).toFixed(2);
-      
-      // Obtener balance de USDT
-      let usdtBalance = '0.00';
-      try {
-        const usdtContract = new ethers.Contract(TOKENS.USDT.address, ERC20_ABI, currentProvider);
-        const usdtBalanceWei = await usdtContract.balanceOf(wallet.address);
-        usdtBalance = parseFloat(ethers.formatUnits(usdtBalanceWei, TOKENS.USDT.decimals)).toFixed(2);
-      } catch (error) {
-        console.error('Error loading USDT balance:', error);
-      }
+      const usdtBalance = parseFloat(ethers.formatUnits(usdtBalanceWei, TOKENS.USDT.decimals)).toFixed(2);
       
       setBalance({
         pol: polBalance.toFixed(4),
@@ -83,16 +85,13 @@ function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: 
         usdt: usdtBalance
       });
     } catch (error: any) {
-      // Silenciar errores de rate limiting en consola
-      if (!error.message?.includes('429')) {
-        console.error('Error updating balance:', error);
-      }
+      // Silenciar todos los errores para máxima velocidad
     }
   }, [wallet, provider]);
 
   const refreshBalance = useCallback(async () => {
-    await updateBalance();
-    showStatusMessage('Balance actualizado', 'success', 2000);
+    updateBalance(); // Sin await para respuesta instantánea
+    showStatusMessage('Actualizando balance...', 'info', 1000);
   }, [updateBalance]);
 
   const showStatusMessage = useCallback((message: string, type: 'success' | 'error' | 'info' | 'warning', duration = 5000) => {

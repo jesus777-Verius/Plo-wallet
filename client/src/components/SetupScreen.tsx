@@ -251,12 +251,12 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
               <h3>🔐 Protege tu Wallet</h3>
             </div>
             <div className="modal-body">
-              <div className="warning-box">
+              <div className="info-box">
                 <i className="fas fa-shield-alt"></i>
-                <p>Tu private key será encriptada con AES-256. Esta contraseña es diferente a tu contraseña de acceso.</p>
+                <p>Tu private key será encriptada con AES-256. Usa la misma contraseña que configuraste para acceder a la aplicación.</p>
               </div>
               <div className="input-group">
-                <label>Contraseña de encriptación (mínimo 8 caracteres)</label>
+                <label>Contraseña de acceso (mínimo 8 caracteres)</label>
                 <input
                   type="password"
                   value={password}

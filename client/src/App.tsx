@@ -3,10 +3,8 @@ import AuthScreen from './components/AuthScreen.tsx';
 import SetupScreen from './components/SetupScreen.tsx';
 import WalletScreen from './components/WalletScreen.tsx';
 import PWAInstallPrompt from './components/PWAInstallPrompt.tsx';
-import LoadingOverlay from './components/LoadingOverlay.tsx';
 import { SecurityManager } from './services/SecurityManager.ts';
 import { EncryptionService } from './services/EncryptionService.ts';
-import { useLoading } from './hooks/useLoading.ts';
 import './App.css';
 
 const security = new SecurityManager();
@@ -16,7 +14,6 @@ function App() {
   const [currentWallet, setCurrentWallet] = useState<any>(null);
   const [encryptionPassword, setEncryptionPassword] = useState<string>('');
   const [isInitialized, setIsInitialized] = useState(false);
-  const { loading, withLoading } = useLoading();
 
   useEffect(() => {
     initializeApp();
@@ -57,24 +54,26 @@ function App() {
       if (savedWallet) {
         const walletData = JSON.parse(savedWallet);
         
-        // Desencriptar private key y mnemonic si hay password
+        // Desencriptar private key y mnemonic INSTANTÁNEAMENTE (sin loading)
         if (password && walletData.encryptedPrivateKey) {
           try {
-            await withLoading(async () => {
-              const privateKey = EncryptionService.decryptPrivateKey(walletData.encryptedPrivateKey, password);
-              const mnemonic = walletData.encryptedMnemonic 
-                ? EncryptionService.decryptPrivateKey(walletData.encryptedMnemonic, password)
-                : null;
-              
-              setCurrentWallet({
-                ...walletData,
-                privateKey,
-                mnemonic
-              });
-              setEncryptionPassword(password);
-            }, 'Desencriptando wallet...', { timeout: 15000 });
+            const privateKey = EncryptionService.decryptPrivateKey(walletData.encryptedPrivateKey, password);
+            const mnemonic = walletData.encryptedMnemonic 
+              ? EncryptionService.decryptPrivateKey(walletData.encryptedMnemonic, password)
+              : null;
+            
+            setCurrentWallet({
+              ...walletData,
+              privateKey,
+              mnemonic
+            });
+            setEncryptionPassword(password);
           } catch (err) {
             console.error('Error desencriptando wallet:', err);
+            alert('Error: No se pudo desencriptar la wallet. Verifica que estés usando la contraseña correcta.');
+            security.logout();
+            setCurrentView('auth');
+            return;
           }
         } else {
           setCurrentWallet(walletData);
@@ -102,26 +101,14 @@ function App() {
     setCurrentView('auth');
   };
 
-  // Mostrar loading hasta que la app esté inicializada
+  // Inicialización instantánea
   if (!isInitialized) {
-    return (
-      <LoadingOverlay 
-        show={true}
-        message="Inicializando aplicación..."
-        timeout={10000}
-      />
-    );
+    return null; // Render instantáneo sin loading
   }
 
   return (
     <>
       <PWAInstallPrompt />
-      <LoadingOverlay 
-        show={loading.show}
-        message={loading.message}
-        progress={loading.progress}
-        timeout={loading.timeout}
-      />
       
       {currentView === 'auth' && (
         <AuthScreen 
