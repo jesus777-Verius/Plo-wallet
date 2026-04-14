@@ -101,8 +101,8 @@ export default function AuthScreen({ security, onLogin, onSetupComplete }: AuthS
               Acceder
             </button>
             <button onClick={() => setShowSetup(true)} className="auth-btn secondary">
-              <i className="fas fa-cog"></i>
-              Primera vez / Configurar
+              <i className="fas fa-user-plus"></i>
+              Registrar
             </button>
           </div>
         ) : (
