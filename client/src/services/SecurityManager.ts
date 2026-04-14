@@ -95,12 +95,12 @@ export class SecurityManager {
     if (this.verifyPassword(password)) {
       const sessionToken = EncryptionService.generateSecureToken();
       
-      // Almacenar sesión con timestamp y metadata
+      // Almacenar sesión con timestamp y metadata (sin IP para velocidad)
       const sessionData = {
         token: sessionToken,
         timestamp: Date.now(),
         userAgent: navigator.userAgent,
-        ip: await this.getClientIP()
+        ip: 'unknown' // Evitar llamada HTTP lenta
       };
       
       sessionStorage.setItem('pol_session', JSON.stringify(sessionData));
@@ -114,7 +114,7 @@ export class SecurityManager {
         this.securitySettings = JSON.parse(settings);
       }
       
-      // Log evento de login exitoso
+      // Log evento de login exitoso (async sin await)
       this.logSecurityEvent('login_success');
       
       return true;

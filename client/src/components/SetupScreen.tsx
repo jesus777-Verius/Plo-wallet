@@ -104,22 +104,16 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
     try {
       setError(''); // Limpiar errores previos
       
-      console.log('Iniciando encriptación...');
-      
-      // Encriptar private key con AES-256
+      // Encriptar private key con AES-256 (optimizado)
       const encryptedPrivateKey = EncryptionService.encryptPrivateKey(
         pendingWallet.privateKey,
         password
       );
       
-      console.log('Private key encriptada');
-      
       // Encriptar mnemonic si existe
       const encryptedMnemonic = pendingWallet.mnemonic 
         ? EncryptionService.encryptPrivateKey(pendingWallet.mnemonic, password)
         : null;
-      
-      console.log('Mnemonic encriptada (si existe)');
       
       const secureWallet = {
         address: pendingWallet.address,
@@ -132,8 +126,6 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
       localStorage.setItem('pol_wallet_data', JSON.stringify(secureWallet));
       localStorage.setItem('pol_wallet_password_set', 'true');
       
-      console.log('Wallet guardada en localStorage');
-      
       // Pasar wallet con private key desencriptada temporalmente para uso inmediato
       onWalletCreated({
         ...secureWallet,
@@ -141,14 +133,10 @@ export default function SetupScreen({ onWalletCreated }: SetupScreenProps) {
         mnemonic: pendingWallet.mnemonic
       });
       
-      console.log('Callback onWalletCreated ejecutado');
-      
-      // Limpiar estado
+      // Limpiar estado inmediatamente
       setShowPasswordPrompt(false);
       setPendingWallet(null);
       setPassword('');
-      
-      console.log('Estado limpiado');
       
     } catch (err: any) {
       console.error('Error en saveEncryptedWallet:', err);

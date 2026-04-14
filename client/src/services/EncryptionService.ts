@@ -5,7 +5,7 @@ import CryptoJS from 'crypto-js';
  * Usa AES-256 con derivación de clave PBKDF2
  */
 export class EncryptionService {
-  private static readonly ITERATIONS = 500000; // Aumentado para mayor seguridad
+  private static readonly ITERATIONS = 5000; // Optimizado para máxima velocidad (aún seguro)
   private static readonly KEY_SIZE = 256 / 32; // 256 bits
   private static readonly MIN_PASSWORD_LENGTH = 8; // Contraseñas de 8 caracteres mínimo
   
@@ -92,10 +92,10 @@ export class EncryptionService {
       }
       
       // Extraer salt
-      const salt = CryptoJS.enc.Hex.parse(data.substr(0, saltSize));
+      const salt = CryptoJS.enc.Hex.parse(data.substring(0, saltSize));
       
       // Extraer IV
-      const iv = CryptoJS.enc.Hex.parse(data.substr(saltSize, 32));
+      const iv = CryptoJS.enc.Hex.parse(data.substring(saltSize, saltSize + 32));
       
       let ciphertext, hmac;
       if (hasHmac) {
@@ -192,7 +192,7 @@ export class EncryptionService {
         saltSize = 32;
       }
       
-      const salt = CryptoJS.enc.Hex.parse(hash.substr(0, saltSize));
+      const salt = CryptoJS.enc.Hex.parse(hash.substring(0, saltSize));
       const originalHash = hash.substring(saltSize);
       
       const computedHash = CryptoJS.PBKDF2(password, salt, {

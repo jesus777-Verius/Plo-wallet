@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { SecurityManager } from '../services/SecurityManager';
-import { useLoading } from '../hooks/useLoading';
 
 interface AuthScreenProps {
   security: SecurityManager;
@@ -18,7 +17,6 @@ export default function AuthScreen({ security, onLogin, onSetupComplete }: AuthS
   const [loginError, setLoginError] = useState('');
   const [setupPasswordError, setSetupPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
-  const { withLoading } = useLoading();
 
   const handleLogin = async () => {
     setLoginError('');
@@ -34,9 +32,8 @@ export default function AuthScreen({ security, onLogin, onSetupComplete }: AuthS
     }
     
     try {
-      const success = await withLoading(async () => {
-        return await security.login(loginPassword);
-      }, 'Verificando contraseña...', { timeout: 15000 });
+      // Login directo sin loading wrapper para máxima velocidad
+      const success = await security.login(loginPassword);
       
       if (success) {
         security.rememberSession();
@@ -62,12 +59,11 @@ export default function AuthScreen({ security, onLogin, onSetupComplete }: AuthS
     }
     
     try {
-      const success = await withLoading(async () => {
-        return security.setupAuth(setupPassword, {
-          rememberSession: enableBiometric,
-          autoLock: enableAutoLock
-        });
-      }, 'Configurando seguridad...', { timeout: 10000 });
+      // Setup directo sin loading wrapper para máxima velocidad
+      const success = security.setupAuth(setupPassword, {
+        rememberSession: enableBiometric,
+        autoLock: enableAutoLock
+      });
       
       if (success) {
         onSetupComplete();

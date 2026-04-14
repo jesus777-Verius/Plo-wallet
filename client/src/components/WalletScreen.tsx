@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { getPolygonProvider, POL_PRICE } from '../config/rpc';
 import { TOKENS, ERC20_ABI } from '../config/tokens';
@@ -18,7 +18,7 @@ interface WalletScreenProps {
   encryptionPassword?: string;
 }
 
-export default function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: WalletScreenProps) {
+function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: WalletScreenProps) {
   const [balance, setBalance] = useState({ pol: '0.0000', usd: '0.00', usdt: '0.00' });
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
@@ -47,15 +47,15 @@ export default function WalletScreen({ wallet, onLogout, onUpdateWallet, encrypt
     
     initProvider();
     
-    // Reducir frecuencia a cada 60 segundos para evitar rate limiting
+    // Actualizar balance cada 2 minutos para mejor rendimiento
     const interval = setInterval(() => {
       if (provider) updateBalance(provider);
-    }, 60000);
+    }, 120000);
     
     return () => clearInterval(interval);
   }, [wallet]);
 
-  const updateBalance = async (rpcProvider?: ethers.JsonRpcProvider) => {
+  const updateBalance = useCallback(async (rpcProvider?: ethers.JsonRpcProvider) => {
     if (!wallet) return;
     
     try {
@@ -88,14 +88,14 @@ export default function WalletScreen({ wallet, onLogout, onUpdateWallet, encrypt
         console.error('Error updating balance:', error);
       }
     }
-  };
+  }, [wallet, provider]);
 
-  const refreshBalance = async () => {
+  const refreshBalance = useCallback(async () => {
     await updateBalance();
     showStatusMessage('Balance actualizado', 'success', 2000);
-  };
+  }, [updateBalance]);
 
-  const showStatusMessage = (message: string, type: 'success' | 'error' | 'info' | 'warning', duration = 5000) => {
+  const showStatusMessage = useCallback((message: string, type: 'success' | 'error' | 'info' | 'warning', duration = 5000) => {
     setStatusMessage(message);
     setStatusType(type);
     setShowStatus(true);
@@ -103,7 +103,7 @@ export default function WalletScreen({ wallet, onLogout, onUpdateWallet, encrypt
     if (duration > 0) {
       setTimeout(() => setShowStatus(false), duration);
     }
-  };
+  }, []);
 
   return (
     <div className="wallet-screen">
@@ -322,3 +322,6 @@ export default function WalletScreen({ wallet, onLogout, onUpdateWallet, encrypt
     </div>
   );
 }
+
+// Memoize component to prevent unnecessary re-renders
+export default memo(WalletScreen);
