@@ -34,23 +34,13 @@ function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: 
   const [provider, setProvider] = useState<ethers.JsonRpcProvider | null>(null);
 
   useEffect(() => {
-    // Conectar al RPC de Polygon INSTANTÁNEAMENTE
-    const initProvider = async () => {
-      try {
-        const rpcProvider = await getPolygonProvider();
-        setProvider(rpcProvider);
-        updateBalance(rpcProvider); // Sin await para no bloquear
-      } catch (error) {
-        console.error('Error initializing provider:', error);
-      }
-    };
+    // Obtener provider de Infura
+    const provider = getPolygonProvider();
+    setProvider(provider);
+    updateBalance(provider);
     
-    initProvider();
-    
-    // Actualizar balance cada 5 minutos (reducir llamadas RPC al mínimo)
-    const interval = setInterval(() => {
-      if (provider) updateBalance(provider);
-    }, 300000);
+    // Actualizar balance cada 5 minutos
+    const interval = setInterval(() => updateBalance(provider), 300000);
     
     return () => clearInterval(interval);
   }, [wallet]);
