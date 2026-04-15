@@ -10,6 +10,20 @@ cd client
 npm install
 ```
 
+### Configuración (Opcional)
+Crea un archivo `.env` en la carpeta `client` para usar tu propia API key de Infura:
+
+```bash
+cp .env.example .env
+```
+
+Edita `.env` y agrega tu API key:
+```env
+VITE_INFURA_API_KEY=tu_api_key_aqui
+```
+
+**Nota:** La aplicación funciona sin API key usando RPCs públicos, pero Infura ofrece mejor rendimiento y confiabilidad.
+
 ### Desarrollo
 ```bash
 npm run dev

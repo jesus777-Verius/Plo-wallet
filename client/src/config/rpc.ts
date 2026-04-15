@@ -1,7 +1,12 @@
 import type { ethers } from 'ethers';
 
+// Obtener API key de Infura desde variables de entorno
+const INFURA_API_KEY = import.meta.env.VITE_INFURA_API_KEY;
+
 // Lista de RPCs públicos de Polygon con validación de seguridad
 export const POLYGON_RPCS = [
+  // Infura (prioritario si hay API key)
+  ...(INFURA_API_KEY ? [`https://polygon-mainnet.infura.io/v3/${INFURA_API_KEY}`] : []),
   'https://polygon-rpc.com',
   'https://rpc-mainnet.matic.network',
   'https://matic-mainnet.chainstacklabs.com',
@@ -39,6 +44,7 @@ function isValidRpcUrl(url: string): boolean {
     
     // Verificar dominios permitidos
     const allowedDomains = [
+      'infura.io',
       'polygon-rpc.com',
       'matic.network',
       'chainstacklabs.com',
