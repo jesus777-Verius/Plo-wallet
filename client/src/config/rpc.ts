@@ -7,11 +7,7 @@ const INFURA_API_KEY = import.meta.env.VITE_INFURA_API_KEY;
 export const POLYGON_RPCS = [
   // Infura (prioritario si hay API key)
   ...(INFURA_API_KEY ? [`https://polygon-mainnet.infura.io/v3/${INFURA_API_KEY}`] : []),
-  'https://polygon-rpc.com',
-  'https://rpc-mainnet.matic.network',
-  'https://matic-mainnet.chainstacklabs.com',
-  'https://rpc-mainnet.maticvigil.com',
-  'https://polygon-bor-rpc.publicnode.com'
+  
 ];
 
 // RPCs de respaldo adicionales

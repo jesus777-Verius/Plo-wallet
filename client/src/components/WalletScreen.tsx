@@ -47,10 +47,10 @@ function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: 
     
     initProvider();
     
-    // Actualizar balance cada 3 minutos (reducir llamadas RPC)
+    // Actualizar balance cada 5 minutos (reducir llamadas RPC al mínimo)
     const interval = setInterval(() => {
       if (provider) updateBalance(provider);
-    }, 180000);
+    }, 300000);
     
     return () => clearInterval(interval);
   }, [wallet]);

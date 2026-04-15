@@ -176,7 +176,7 @@ body {
   color: var(--text-primary);
   font-size: 1rem;
   font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.05s ease;
   outline: none;
 }
 
@@ -230,7 +230,7 @@ textarea.import-input {
   border-radius: var(--radius);
   border: none;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.05s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -243,23 +243,13 @@ textarea.import-input {
 .auth-btn::before,
 .setup-btn::before,
 .modal-btn::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  transform: translate(-50%, -50%);
-  transition: width 0.3s, height 0.3s;
+  display: none;
 }
 
 .auth-btn:active::before,
 .setup-btn:active::before,
 .modal-btn:active::before {
-  width: 300px;
-  height: 300px;
+  display: none;
 }
 
 .auth-btn.primary,
@@ -529,7 +519,7 @@ textarea.import-input {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: fadeIn 0.15s ease;
+  animation: fadeIn 0.05s ease;
 }
 
 @keyframes fadeIn {
@@ -545,14 +535,14 @@ textarea.import-input {
   max-width: 480px;
   max-height: 85vh;
   overflow-y: auto;
-  animation: scaleIn 0.15s ease;
+  animation: scaleIn 0.05s ease;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
   position: relative;
 }
 
 @keyframes scaleIn {
-  from { transform: scale(0.95); opacity: 0; }
+  from { transform: scale(0.98); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 
@@ -973,26 +963,18 @@ textarea.import-input {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  transition: all 0.15s ease;
+  transition: all 0.05s ease;
   color: white;
   position: relative;
   overflow: hidden;
 }
 
 .action-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  display: none;
 }
 
 .action-btn:hover::before {
-  opacity: 1;
+  display: none;
 }
 
 .action-btn i {
@@ -1105,7 +1087,7 @@ textarea.import-input {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all 0.15s ease;
+  transition: all 0.05s ease;
   cursor: pointer;
 }
 
