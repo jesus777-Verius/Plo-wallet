@@ -8,7 +8,7 @@ if (!INFURA_API_KEY) {
 }
 
 // URL del RPC de Infura
-const INFURA_RPC_URL = `https://polygon-mainnet.infura.io/v3/${INFURA_API_KEY}`;
+const INFURA_RPC_URL = `https://polygon-mainnet.infura.io/${INFURA_API_KEY}`;
 
 // Precio aproximado de POL (idealmente obtener de API en producción)
 export const POL_PRICE = 0.45;
