@@ -8,6 +8,22 @@ export const TOKENS = {
     verified: true,
     coingeckoId: 'tether'
   },
+  USDC: {
+    address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
+    decimals: 6,
+    symbol: 'USDC',
+    name: 'USD Coin',
+    verified: true,
+    coingeckoId: 'usd-coin'
+  },
+  DAI: {
+    address: '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063',
+    decimals: 18,
+    symbol: 'DAI',
+    name: 'Dai Stablecoin',
+    verified: true,
+    coingeckoId: 'dai'
+  },
   WMATIC: {
     address: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
     decimals: 18,

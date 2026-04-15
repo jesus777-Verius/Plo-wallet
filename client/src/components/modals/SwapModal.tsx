@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { TOKENS, QUICKSWAP_ROUTER, ERC20_ABI, QUICKSWAP_ROUTER_ABI } from '../../config/tokens';
+import { SwapService } from '../../services/SwapService';
 import { EncryptionService } from '../../services/EncryptionService';
 
 interface SwapModalProps {
@@ -11,17 +11,21 @@ interface SwapModalProps {
   onError: (error: string) => void;
 }
 
+type TokenType = 'POL' | 'USDT';
+
 export default function SwapModal({ wallet, provider, onClose, onSuccess, onError }: SwapModalProps) {
-  const [fromToken, setFromToken] = useState<'USDT' | 'POL'>('USDT');
-  const [toToken, setToToken] = useState<'USDT' | 'POL'>('POL');
+  const [fromToken, setFromToken] = useState<TokenType>('POL');
+  const [toToken, setToToken] = useState<TokenType>('USDT');
   const [amount, setAmount] = useState('');
   const [estimatedOutput, setEstimatedOutput] = useState('0');
+  const [polBalance, setPolBalance] = useState('0');
   const [usdtBalance, setUsdtBalance] = useState('0');
   const [loading, setLoading] = useState(false);
+  const [loadingQuote, setLoadingQuote] = useState(false);
   const [amountError, setAmountError] = useState('');
 
   useEffect(() => {
-    loadUSDTBalance();
+    loadBalances();
   }, []);
 
   useEffect(() => {
@@ -30,45 +34,39 @@ export default function SwapModal({ wallet, provider, onClose, onSuccess, onErro
     } else {
       setEstimatedOutput('0');
     }
-  }, [amount, fromToken]);
+  }, [amount, fromToken, toToken]);
 
-  const loadUSDTBalance = async () => {
+  const loadBalances = async () => {
     try {
-      const usdtContract = new ethers.Contract(TOKENS.USDT.address, ERC20_ABI, provider);
-      const balance = await usdtContract.balanceOf(wallet.address);
-      const formatted = ethers.formatUnits(balance, TOKENS.USDT.decimals);
-      setUsdtBalance(formatted);
+      const polBal = await provider.getBalance(wallet.address);
+      setPolBalance(ethers.formatEther(polBal));
+      
+      const usdtBal = await SwapService.getTokenBalance(provider, 'USDT', wallet.address);
+      setUsdtBalance(usdtBal);
     } catch (error) {
-      console.error('Error loading USDT balance:', error);
+      console.error('Error loading balances:', error);
     }
   };
 
   const estimateSwap = async () => {
+    setLoadingQuote(true);
     try {
-      const routerContract = new ethers.Contract(QUICKSWAP_ROUTER, QUICKSWAP_ROUTER_ABI, provider);
-      const amountIn = fromToken === 'USDT' 
-        ? ethers.parseUnits(amount, TOKENS.USDT.decimals)
-        : ethers.parseEther(amount);
-
-      const path = fromToken === 'USDT'
-        ? [TOKENS.USDT.address, TOKENS.WMATIC.address]
-        : [TOKENS.WMATIC.address, TOKENS.USDT.address];
-
-      const amounts = await routerContract.getAmountsOut(amountIn, path);
-      const output = fromToken === 'USDT'
-        ? ethers.formatEther(amounts[1])
-        : ethers.formatUnits(amounts[1], TOKENS.USDT.decimals);
-      
+      const quote = await SwapService.getQuote(provider, fromToken, toToken, amount);
+      const decimals = toToken === 'POL' ? 18 : 6;
+      const output = ethers.formatUnits(quote.amountOut, decimals);
       setEstimatedOutput(parseFloat(output).toFixed(6));
     } catch (error) {
       console.error('Error estimating swap:', error);
       setEstimatedOutput('0');
+    } finally {
+      setLoadingQuote(false);
     }
   };
 
   const switchTokens = () => {
+    const temp = fromToken;
     setFromToken(toToken);
-    setToToken(fromToken);
+    setToToken(temp);
     setAmount('');
     setEstimatedOutput('0');
   };
@@ -76,7 +74,6 @@ export default function SwapModal({ wallet, provider, onClose, onSuccess, onErro
   const handleSwap = async () => {
     setAmountError('');
 
-    // Validar entrada con EncryptionService
     const sanitizedAmount = EncryptionService.sanitizeInput(amount.trim());
     
     if (!EncryptionService.validateAmount(sanitizedAmount)) {
@@ -85,26 +82,18 @@ export default function SwapModal({ wallet, provider, onClose, onSuccess, onErro
     }
 
     const numAmount = parseFloat(sanitizedAmount);
-    const balance = fromToken === 'USDT' ? parseFloat(usdtBalance) : 0;
+    const balance = fromToken === 'POL' ? parseFloat(polBalance) : parseFloat(usdtBalance);
     
     if (numAmount <= 0) {
       setAmountError('Ingresa una cantidad válida');
       return;
     }
     
-    if (numAmount > balance && fromToken === 'USDT') {
+    if (numAmount > balance) {
       setAmountError('Fondos insuficientes');
       return;
     }
 
-    // Límites de seguridad para swaps
-    const maxSwapAmount = fromToken === 'USDT' ? 10000 : 1000; // USDT: $10k, POL: 1000
-    if (numAmount > maxSwapAmount) {
-      setAmountError(`Cantidad máxima para swap: ${maxSwapAmount} ${fromToken}`);
-      return;
-    }
-
-    // Verificar slippage mínimo
     const estimatedNum = parseFloat(estimatedOutput);
     if (estimatedNum <= 0) {
       setAmountError('No se puede calcular el intercambio');
@@ -114,108 +103,40 @@ export default function SwapModal({ wallet, provider, onClose, onSuccess, onErro
     setLoading(true);
 
     try {
-      const signer = new ethers.Wallet(wallet.privateKey, provider);
+      const quote = await SwapService.getQuote(provider, fromToken, toToken, sanitizedAmount);
       
-      if (fromToken === 'USDT') {
-        // Swap USDT -> POL con validaciones adicionales
-        const usdtContract = new ethers.Contract(TOKENS.USDT.address, ERC20_ABI, signer);
-        const routerContract = new ethers.Contract(QUICKSWAP_ROUTER, QUICKSWAP_ROUTER_ABI, signer);
-        
-        const amountIn = ethers.parseUnits(sanitizedAmount, TOKENS.USDT.decimals);
-        
-        // Verificar balance real antes de proceder
-        const realBalance = await usdtContract.balanceOf(wallet.address);
-        if (realBalance < amountIn) {
-          throw new Error('Balance insuficiente verificado en blockchain');
-        }
-        
-        // Verificar allowance y aprobar si es necesario
-        const allowance = await usdtContract.allowance(wallet.address, QUICKSWAP_ROUTER);
-        if (allowance < amountIn) {
-          const approveTx = await usdtContract.approve(QUICKSWAP_ROUTER, amountIn);
-          await approveTx.wait();
-        }
-        
-        // Obtener precio actualizado antes del swap
-        const path = [TOKENS.USDT.address, TOKENS.WMATIC.address];
-        const amounts = await routerContract.getAmountsOut(amountIn, path);
-        const currentOutput = ethers.formatEther(amounts[1]);
-        
-        // Verificar que el precio no haya cambiado drásticamente (protección MEV)
-        const priceDifference = Math.abs(parseFloat(currentOutput) - estimatedNum) / estimatedNum;
-        if (priceDifference > 0.05) { // 5% máximo de diferencia
-          throw new Error('El precio ha cambiado significativamente. Intenta nuevamente.');
-        }
-        
-        const deadline = Math.floor(Date.now() / 1000) + 60 * 10; // 10 minutos
-        const amountOutMin = amounts[1] * BigInt(90) / BigInt(100); // 10% slippage máximo
-        
-        const swapTx = await routerContract.swapExactTokensForETH(
-          amountIn,
-          amountOutMin,
-          path,
-          wallet.address,
-          deadline,
-          {
-            gasLimit: 300000, // Límite de gas fijo para evitar ataques
-          }
+      if (fromToken === 'POL') {
+        await SwapService.swapPOLForToken(
+          provider,
+          wallet.privateKey,
+          'USDT',
+          sanitizedAmount,
+          quote.amountOutMin,
+          wallet.address
         );
-        
-        await swapTx.wait();
-        onSuccess();
       } else {
-        // Swap POL -> USDT con validaciones similares
-        const routerContract = new ethers.Contract(QUICKSWAP_ROUTER, QUICKSWAP_ROUTER_ABI, signer);
-        
-        // Verificar balance de POL
-        const polBalance = await provider.getBalance(wallet.address);
-        const amountIn = ethers.parseEther(sanitizedAmount);
-        
-        if (polBalance < amountIn) {
-          throw new Error('Balance de POL insuficiente');
-        }
-        
-        const path = [TOKENS.WMATIC.address, TOKENS.USDT.address];
-        const amounts = await routerContract.getAmountsOut(amountIn, path);
-        const currentOutput = ethers.formatUnits(amounts[1], TOKENS.USDT.decimals);
-        
-        // Verificar cambio de precio
-        const priceDifference = Math.abs(parseFloat(currentOutput) - estimatedNum) / estimatedNum;
-        if (priceDifference > 0.05) {
-          throw new Error('El precio ha cambiado significativamente. Intenta nuevamente.');
-        }
-        
-        const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
-        const amountOutMin = amounts[1] * BigInt(90) / BigInt(100);
-        
-        const swapTx = await routerContract.swapExactETHForTokens(
-          amountOutMin,
-          path,
-          wallet.address,
-          deadline,
-          { 
-            value: amountIn,
-            gasLimit: 300000
-          }
+        await SwapService.swapTokenForPOL(
+          provider,
+          wallet.privateKey,
+          'USDT',
+          sanitizedAmount,
+          quote.amountOutMin,
+          wallet.address
         );
-        
-        await swapTx.wait();
-        onSuccess();
       }
+      
+      onSuccess();
     } catch (err: any) {
       console.error('Swap error:', err);
       
-      // Mensajes de error más seguros (no exponer detalles internos)
       let errorMessage = 'Error en el intercambio';
       
       if (err.message.includes('insufficient funds')) {
-        errorMessage = 'Fondos insuficientes para completar la transacción';
+        errorMessage = 'Fondos insuficientes';
       } else if (err.message.includes('slippage')) {
-        errorMessage = 'Slippage muy alto, intenta con una cantidad menor';
-      } else if (err.message.includes('deadline')) {
-        errorMessage = 'Transacción expirada, intenta nuevamente';
-      } else if (err.message.includes('precio ha cambiado')) {
-        errorMessage = err.message;
+        errorMessage = 'Slippage muy alto';
+      } else if (err.message.includes('user rejected')) {
+        errorMessage = 'Transacción cancelada';
       }
       
       onError(errorMessage);
@@ -224,83 +145,107 @@ export default function SwapModal({ wallet, provider, onClose, onSuccess, onErro
     }
   };
 
+  const currentBalance = fromToken === 'POL' ? polBalance : usdtBalance;
+
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-container">
+      <div className="modal-container swap-modal">
         <div className="modal-header">
-          <h3>Swap Tokens</h3>
+          <h3><i className="fas fa-exchange-alt"></i> Swap Tokens</h3>
           <button onClick={onClose} className="modal-close">
             <i className="fas fa-times"></i>
           </button>
         </div>
+        
         <div className="modal-body">
           {/* From Token */}
-          <div className="input-group">
-            <label>Desde</label>
-            <div className="swap-input-container">
+          <div className="swap-section">
+            <label className="swap-label">Desde</label>
+            <div className="swap-card">
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.0"
                 step="0.000001"
-                className={`modal-input ${amountError ? 'error' : ''}`}
+                className="swap-input"
+                disabled={loading}
               />
-              <div className="token-selector">
-                <span className="token-badge">{fromToken}</span>
+              <div className="swap-token-badge">
+                <span className="token-name">{fromToken}</span>
+                <i className="fas fa-chevron-down"></i>
               </div>
             </div>
-            {fromToken === 'USDT' && (
-              <div className="balance-info">Balance: {parseFloat(usdtBalance).toFixed(6)} USDT</div>
-            )}
-            {amountError && <div className="input-error show">{amountError}</div>}
+            <div className="swap-balance">
+              <span>Balance: {parseFloat(currentBalance).toFixed(6)} {fromToken}</span>
+              <button 
+                className="max-btn" 
+                onClick={() => setAmount(currentBalance)}
+                disabled={loading}
+              >
+                MAX
+              </button>
+            </div>
+            {amountError && <div className="swap-error">{amountError}</div>}
           </div>
 
           {/* Switch Button */}
-          <div className="swap-switch-container">
-            <button onClick={switchTokens} className="swap-switch-btn">
+          <div className="swap-switch-wrapper">
+            <button onClick={switchTokens} className="swap-switch-btn" disabled={loading}>
               <i className="fas fa-exchange-alt"></i>
             </button>
           </div>
 
           {/* To Token */}
-          <div className="input-group">
-            <label>A</label>
-            <div className="swap-input-container">
+          <div className="swap-section">
+            <label className="swap-label">A</label>
+            <div className="swap-card">
               <input
                 type="text"
-                value={estimatedOutput}
+                value={loadingQuote ? 'Calculando...' : estimatedOutput}
                 readOnly
-                placeholder="0.0"
-                className="modal-input"
+                placeholder="0"
+                className="swap-input readonly"
               />
-              <div className="token-selector">
-                <span className="token-badge">{toToken}</span>
+              <div className="swap-token-badge">
+                <span className="token-name">{toToken}</span>
+                <i className="fas fa-chevron-down"></i>
               </div>
             </div>
-            <div className="swap-info">Estimado (5% slippage incluido)</div>
+            <div className="swap-info-text">Estimado (2% slippage)</div>
           </div>
 
-          {/* Swap Info */}
-          <div className="swap-details">
-            <div className="swap-detail-item">
-              <span>DEX</span>
-              <span>QuickSwap</span>
+          {/* Swap Details */}
+          <div className="swap-details-card">
+            <div className="swap-detail-row">
+              <span className="detail-label">
+                <i className="fas fa-chart-line"></i> DEX
+              </span>
+              <span className="detail-value">QuickSwap V2</span>
             </div>
-            <div className="swap-detail-item">
-              <span>Slippage</span>
-              <span>5%</span>
+            <div className="swap-detail-row">
+              <span className="detail-label">
+                <i className="fas fa-percentage"></i> Slippage
+              </span>
+              <span className="detail-value">2%</span>
             </div>
           </div>
 
+          {/* Swap Button */}
           <button
             onClick={handleSwap}
-            className={`modal-btn primary ${loading ? 'btn-loading' : ''}`}
-            disabled={loading || !amount || parseFloat(amount) <= 0}
+            className={`swap-btn ${loading ? 'loading' : ''}`}
+            disabled={loading || loadingQuote || !amount || parseFloat(amount) <= 0}
           >
             <i className="fas fa-exchange-alt"></i>
-            {loading ? 'Swapeando...' : 'Swap'}
+            {loading ? 'Swapeando...' : 'Swap en QuickSwap'}
           </button>
+          
+          {/* Info Footer */}
+          <div className="swap-footer">
+            <i className="fas fa-info-circle"></i>
+            <span>Swap real en QuickSwap DEX (Polygon Mainnet)</span>
+          </div>
         </div>
       </div>
     </div>

@@ -44,6 +44,16 @@ export default function AuthScreen({ security, onLogin, onSetupComplete }: AuthS
     }
   };
 
+  const handleResetApp = () => {
+    if (window.confirm('⚠️ ADVERTENCIA: Esto eliminará TODA tu información incluyendo tu wallet.\n\n¿Estás seguro de que quieres resetear la aplicación?')) {
+      if (window.confirm('Esta acción NO se puede deshacer. ¿Continuar?')) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.reload();
+      }
+    }
+  };
+
   const handleSetupAuth = async () => {
     setSetupPasswordError('');
     setConfirmPasswordError('');
@@ -104,6 +114,13 @@ export default function AuthScreen({ security, onLogin, onSetupComplete }: AuthS
               <i className="fas fa-user-plus"></i>
               Registrar
             </button>
+            
+            {loginError && (
+              <button onClick={handleResetApp} className="auth-btn danger" style={{ marginTop: '20px' }}>
+                <i className="fas fa-exclamation-triangle"></i>
+                ¿Olvidaste tu contraseña? Resetear App
+              </button>
+            )}
           </div>
         ) : (
           <div className="auth-form">

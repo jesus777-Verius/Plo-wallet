@@ -134,8 +134,25 @@ export default function SendModal({ wallet, balance, provider, onClose, onSucces
       // Firmar y enviar transacción (firmado localmente, nunca se envía la private key)
       const txResponse = await signer.sendTransaction(tx);
       
-      // Esperar confirmación
-      await txResponse.wait();
+      // Mostrar hash de transacción
+      console.log('📤 Transacción enviada:', txResponse.hash);
+      
+      // Importar función de seguimiento en tiempo real
+      const { watchTransaction } = await import('../../config/rpc');
+      
+      // Seguir transacción en tiempo real
+      await watchTransaction(
+        txResponse.hash,
+        () => {
+          console.log('⏳ Transacción pendiente...');
+        },
+        (receipt) => {
+          console.log('✅ Transacción confirmada en bloque:', receipt.blockNumber);
+        },
+        (error) => {
+          console.error('❌ Error en transacción:', error);
+        }
+      );
       
       // Preguntar si quiere guardar en contactos
       const contactName = AddressBook.findByAddress(toAddress);

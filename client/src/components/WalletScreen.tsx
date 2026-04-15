@@ -10,6 +10,8 @@ import ActivityModal from './modals/ActivityModal';
 import SwapModal from './modals/SwapModal';
 import AddressBookModal from './modals/AddressBookModal';
 import WalletsModal from './modals/WalletsModal';
+import NetworkStatus from './NetworkStatus';
+import NotificationBell from './NotificationBell';
 
 interface WalletScreenProps {
   wallet: any;
@@ -39,10 +41,58 @@ function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: 
     setProvider(provider);
     updateBalance(provider);
     
-    // Actualizar balance cada 5 minutos
-    const interval = setInterval(() => updateBalance(provider), 300000);
+    // Importar funciones de tiempo real
+    import('../config/rpc').then(({ listenToBalanceChanges, getNodeInfo }) => {
+      // Actualizar balance en tiempo real
+      const unsubscribe = listenToBalanceChanges(wallet.address, (newBalance) => {
+        const polBalance = parseFloat(newBalance);
+        const usdValue = (polBalance * POL_PRICE).toFixed(2);
+        
+        setBalance(prev => ({
+          ...prev,
+          pol: polBalance.toFixed(4),
+          usd: usdValue
+        }));
+        
+        // Mostrar notificación de cambio
+        showStatusMessage('Balance actualizado en tiempo real', 'success');
+      });
+      
+      // Obtener info del nodo
+      getNodeInfo().then(info => {
+        if (info.connected) {
+          console.log('✅ Conectado a Polygon Mainnet');
+          console.log(`📦 Bloque actual: ${info.blockNumber}`);
+          console.log(`⛽ Gas price: ${info.gasPrice} Gwei`);
+        }
+      });
+      
+      return () => {
+        unsubscribe();
+      };
+    });
     
-    return () => clearInterval(interval);
+    // Actualizar USDT cada 30 segundos (no hay WebSocket para tokens)
+    const usdtInterval = setInterval(() => updateUSDTBalance(provider), 30000);
+    
+    return () => {
+      clearInterval(usdtInterval);
+    };
+  }, [wallet]);
+
+  const updateUSDTBalance = useCallback(async (rpcProvider: ethers.JsonRpcProvider) => {
+    try {
+      const usdtContract = new ethers.Contract(TOKENS.USDT.address, ERC20_ABI, rpcProvider);
+      const usdtBalanceWei = await usdtContract.balanceOf(wallet.address);
+      const usdtBalance = parseFloat(ethers.formatUnits(usdtBalanceWei, TOKENS.USDT.decimals)).toFixed(2);
+      
+      setBalance(prev => ({
+        ...prev,
+        usdt: usdtBalance
+      }));
+    } catch (error) {
+      // Silenciar errores
+    }
   }, [wallet]);
 
   const updateBalance = useCallback(async (rpcProvider?: ethers.JsonRpcProvider) => {
@@ -96,6 +146,9 @@ function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: 
 
   return (
     <div className="wallet-screen">
+      {/* Network Status Indicator */}
+      <NetworkStatus />
+      
       {/* Status Bar */}
       {showStatus && (
         <div className={`status-bar ${statusType}`}>
@@ -125,6 +178,7 @@ function WalletScreen({ wallet, onLogout, onUpdateWallet, encryptionPassword }: 
             </div>
           </div>
           <div className="header-actions">
+            <NotificationBell wallet={wallet} provider={provider!} />
             <button onClick={() => setShowAddressBook(true)} className="icon-btn" title="Libreta de direcciones">
               <i className="fas fa-address-book"></i>
             </button>

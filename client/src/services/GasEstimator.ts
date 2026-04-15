@@ -1,12 +1,35 @@
 import { ethers } from 'ethers';
 import { EncryptionService } from './EncryptionService';
 
+const INFURA_API_KEY = import.meta.env.VITE_INFURA_API_KEY;
+const GAS_API_URL = `https://gas.api.infura.io/v3/${INFURA_API_KEY}`;
+
 export class GasEstimator {
   private static readonly MAX_GAS_LIMIT = BigInt(1000000); // Límite máximo de gas
   private static readonly MIN_GAS_LIMIT = BigInt(21000); // Límite mínimo de gas
   private static readonly MAX_GAS_PRICE = ethers.parseUnits('500', 'gwei'); // Precio máximo de gas
   private static readonly DEFAULT_GAS_PRICE = ethers.parseUnits('50', 'gwei');
   private static readonly POL_PRICE_USD = 0.45; // Precio de POL en USD
+
+  /**
+   * Obtener precio de gas desde Infura Gas API
+   */
+  private static async getGasPriceFromAPI(): Promise<bigint | null> {
+    try {
+      const response = await fetch(`${GAS_API_URL}/networks/137/suggestedGasFees`);
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      // Usar precio medio (medium priority)
+      const gasPriceGwei = data.medium?.suggestedMaxFeePerGas || data.estimatedBaseFee;
+      if (!gasPriceGwei) return null;
+      
+      return ethers.parseUnits(gasPriceGwei.toString(), 'gwei');
+    } catch (error) {
+      console.warn('Error obteniendo gas price de API:', error);
+      return null;
+    }
+  }
 
   /**
    * Estima el gas para una transacción con validaciones de seguridad
@@ -62,9 +85,12 @@ export class GasEstimator {
       // Agregar 20% de buffer para seguridad
       gasLimit = gasLimit * BigInt(120) / BigInt(100);
 
-      // Obtener precio del gas con validación
-      const feeData = await provider.getFeeData();
-      let gasPrice = feeData.gasPrice || this.DEFAULT_GAS_PRICE;
+      // Obtener precio del gas desde API o provider
+      let gasPrice = await this.getGasPriceFromAPI();
+      if (!gasPrice) {
+        const feeData = await provider.getFeeData();
+        gasPrice = feeData.gasPrice || this.DEFAULT_GAS_PRICE;
+      }
       
       // Validar precio del gas
       if (gasPrice > this.MAX_GAS_PRICE) {
@@ -151,8 +177,12 @@ export class GasEstimator {
       // Buffer del 30% para tokens (pueden ser más impredecibles)
       gasLimit = gasLimit * BigInt(130) / BigInt(100);
 
-      const feeData = await provider.getFeeData();
-      let gasPrice = feeData.gasPrice || this.DEFAULT_GAS_PRICE;
+      // Obtener precio del gas desde API o provider
+      let gasPrice = await this.getGasPriceFromAPI();
+      if (!gasPrice) {
+        const feeData = await provider.getFeeData();
+        gasPrice = feeData.gasPrice || this.DEFAULT_GAS_PRICE;
+      }
       
       if (gasPrice > this.MAX_GAS_PRICE) {
         gasPrice = this.DEFAULT_GAS_PRICE;
@@ -198,8 +228,14 @@ export class GasEstimator {
    */
   static async getRecommendedGasPrice(provider: ethers.JsonRpcProvider): Promise<bigint> {
     try {
-      const feeData = await provider.getFeeData();
-      let gasPrice = feeData.gasPrice || this.DEFAULT_GAS_PRICE;
+      // Intentar primero con Gas API
+      let gasPrice = await this.getGasPriceFromAPI();
+      
+      // Fallback al provider
+      if (!gasPrice) {
+        const feeData = await provider.getFeeData();
+        gasPrice = feeData.gasPrice || this.DEFAULT_GAS_PRICE;
+      }
       
       if (!this.validateGasPrice(gasPrice)) {
         gasPrice = this.DEFAULT_GAS_PRICE;
