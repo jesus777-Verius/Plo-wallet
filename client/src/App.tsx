@@ -70,9 +70,26 @@ function App() {
             setEncryptionPassword(password);
           } catch (err) {
             console.error('Error desencriptando wallet:', err);
-            alert('Error: No se pudo desencriptar la wallet. Verifica que estés usando la contraseña correcta.');
-            security.logout();
-            setCurrentView('auth');
+            
+            const shouldReset = confirm(
+              '❌ Error: Contraseña incorrecta para desencriptar la wallet.\n\n' +
+              '⚠️ IMPORTANTE: Usa la MISMA contraseña que usaste al crear/importar la wallet.\n\n' +
+              '¿Quieres RESETEAR la aplicación? (Perderás la wallet actual)\n\n' +
+              '✅ Haz clic en OK para resetear\n' +
+              '❌ Haz clic en Cancelar para intentar de nuevo'
+            );
+            
+            if (shouldReset) {
+              // Resetear todo
+              localStorage.clear();
+              sessionStorage.clear();
+              security.logout();
+              alert('✅ Aplicación reseteada. Ahora puedes crear una nueva wallet.');
+              window.location.reload();
+            } else {
+              security.logout();
+              setCurrentView('auth');
+            }
             return;
           }
         } else {
